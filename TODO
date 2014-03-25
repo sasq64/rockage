@@ -1,0 +1,34 @@
+
+X Missing causes crash
+* Game over animation & restart
+X Remove 1024 height limit
+* DANGER indication
+
+
+AUTO RESOURCES
+
+auto res = Resource.getInstance();
+
+
+
+files (images) and variables (text file).
+
+res.register_var("tile_size", 48);
+res.register_bitmap("tiles", 256, 256, generateTiles);
+res.on_load("tiles", [](const bitmap &bm) {
+	tiles.add_tiles(bm);
+});
+
+res.register_file("music.mod");
+
+res.register_script("scoring", 
+"""
+
+""");
+
+
+OR
+
+tileset(32, 32, "tileset");
+if(ts.tile_count() == 0)
+	generate();
