@@ -16,7 +16,7 @@ using namespace flatland;
 
 void Game::render() {
 
-	static float r = 0;
+	//static float r = 0;
 	gamelayer.render(render_target, x_offset);
 
 	//auto dx = ship_pos - (ship_pos%tile_size) + x_offset;
@@ -35,7 +35,7 @@ void Game::render() {
 	}
 
 	//auto p = Shape::createRectangle(200,200).roundCorners(4, 34.0);
-	auto p = Shape::createText("Hello people").scale(2.0).translate(-400,0);
+	//auto p = Shape::createText("Hello people").scale(2.0).translate(-400,0);
 	//p = p.roundCorners(4, 2.0);
 	//p = p.rotate(100.5);
 	//p.render(context);
@@ -288,19 +288,21 @@ void Game::create_tiles() {
 
 	vec2f center { tile.width() / 2.0f, tile.height() / 2.0f };
 
-	blocks.add_solid(0xff000000);
+	blocks.add_solid(0xff000000, sz, sz);
 
 	tile.clear();
 	tile.circle(center, radius, 0x000020); // Outline
 	tile.circle(center, radius*0.90, 0x0000C0); // Main ball
 	tile.circle(center + vec2f{radius*0.15f, -radius*0.15f}, radius * 0.6, 0x0040ff); // Hilight
-	blocks.add_tiles(tile.get_pixels());
+
+	for(const auto &b : tile.get_pixels().split(tile_size, tile_size))
+		blocks.add(b);
 
 	tile.clear();
 	tile.line(sz/2,0, sz, sz, 0xff00ff00);
 	tile.line(sz,sz, 0, sz, 0xff00ff00);
 	tile.line(0, sz, sz/2,0, 0xff00ff00);
-	blocks.add_tiles(tile.get_pixels());
+	blocks.add(tile.get_pixels());
 
 	uint32_t LIGHT = 0xffcccccc;
 	uint32_t GRAY = 0xffaaaaaa;
@@ -349,7 +351,7 @@ void Game::create_tiles() {
 			clip.x0 = 2;
 			rec(2, 0, 2, sz, LIGHT);
 		}
-		blocks.add_tiles(tile.get_pixels());
+		blocks.add(tile.get_pixels());
 	}
 
 	//auto bm = blocks.texture.get_pixels();

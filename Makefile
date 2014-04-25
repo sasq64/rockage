@@ -20,7 +20,7 @@ CFLAGS += -Qunused-arguments
 endif
 
 
-CFLAGS += -g -O2 -Wall -Wno-switch 
+CFLAGS += -g -Wall -Wno-switch 
 
 #USE_CCACHE=1
 

@@ -26,7 +26,7 @@ private:
 
 };
 
-class Game {
+class Game : public grappix::TileSource {
 public:
 	Game(const grappix::RenderTarget &target, int size = 48) : 
 		width { 16 },
@@ -34,18 +34,8 @@ public:
 		visible_height { 24 },
 		tile_size { target.width() / width },
 		render_target { target },
-		blocks { tile_size, tile_size, 512, 512 },
-		gamelayer { width, level_height, (width-1) * tile_size, visible_height * tile_size, blocks, [&](uint32_t x, uint32_t y) -> uint32_t {
-			auto o = x + y*width;
-			uint32_t p = playfield[o];
-			if(p > 1) {
-				return 16+((y > 0 && playfield[o-width] == p ? 0 : 1) | 
-				       (x < width-1 && playfield[o+1] == p ? 0 : 2) | 
-				       (y < level_height-1 && playfield[o+width] == p ? 0 : 4) | 
-				       (x > 0 && playfield[o-1] == p ? 0 : 8)); 
-			}
-			return 0;
-		} },
+		blocks { 512, 512 },
+		gamelayer { (width-1) * tile_size, visible_height * tile_size, tile_size, tile_size, blocks, *this },
 		spritelayer { blocks },
 		playfield (width * visible_height * 2)
 	{
@@ -53,15 +43,17 @@ public:
 		pwidth = width * tile_size;
 		pheight = visible_height * tile_size;
 
-		auto &res = grappix::Resources::getInstance();
-		res.register_image("tiles", [&](grappix::bitmap &bm) {
+		//auto &res = grappix::Resources::getInstance();
+		//res.register_image("tiles", [&](image::bitmap &bm) {
 			create_tiles();
-			bm = blocks.texture.get_pixels();
-		});
+		//	bm = blocks.texture.get_pixels();
+		//});
 
-		res.on_load("tiles", [&](const std::string &name, grappix::Resources &res) {
-			blocks.set_image(res.get_image(name));
-		});
+		//res.on_load("tiles", [&](const std::string &name, grappix::Resources &res) {
+		//	blocks.set_image(res.get_image(name));
+		//	for(int i=0; i<32; i++)
+		//		blocks.add_tile(tile_size, tile_size);
+		//});
 
 		sprite = spritelayer.addSprite(2, 320, render_target.height() - tile_size);
 
@@ -71,20 +63,32 @@ public:
 		auto cardShape = flatland::Shape::createRectangle(40,70).roundCorners(4, 2.0);
 		cardShape = cardShape.makeSolid().setColor(flatland::Colors::WHITE).concat(cardShape.setColor(flatland::Colors::BLACK));
 
-		auto p = flatland::Shape::createText("Hello people").scale(2.0).translate(-400,0);
-		root.add(new flatland::Container<flatland::Shape>(cardShape));
-		root.add(new flatland::Container<flatland::Shape>(p));
+		//auto p = flatland::Shape::createText("Hello people").scale(2.0).translate(-400,0);
+		//root.add(cardShape);
+		//root.add(p);
 
 		//grappix::tween::make_tween().to(root.position(), glm::vec2(100,0)).seconds(1.0);
-		grappix::tween::make_tween().to(root.rotation(), 180.0).seconds(1.0).on_complete([=]() mutable {
-			grappix::tween::make_tween().to(root.position(), glm::vec2(100,0)).seconds(1.0);
-		});
+		//grappix::tween::make_tween().to(root.rotation(), 720.0).seconds(1.0).on_complete([=]() mutable {
+		//	grappix::tween::make_tween().to(root.position(), glm::vec2(100,0)).seconds(1.0);
+		//});
 
 	}
 
 	void start();
 	void update(uint32_t delta);
 	void render();
+
+	uint32_t getTile(uint32_t x, uint32_t y) override {
+		auto o = x + y*width;
+		uint32_t p = playfield[o];
+		if(p > 1) {
+			return 16+((y > 0 && playfield[o-width] == p ? 0 : 1) | 
+			       (x < width-1 && playfield[o+1] == p ? 0 : 2) | 
+			       (y < level_height-1 && playfield[o+width] == p ? 0 : 4) | 
+			       (x > 0 && playfield[o-1] == p ? 0 : 8)); 
+		}
+		return 0;
+	}
 
 private:
 
