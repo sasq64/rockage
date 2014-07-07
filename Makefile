@@ -7,7 +7,7 @@ include $(CPP_MODS)/config.mk
 include $(GRAPPIX)/module.mk
 include $(FLATLAND)/module.mk
 include $(CPP_MODS)/coreutils/module.mk
-#include $(CPP_MODS)/lua/module.mk
+include $(CPP_MODS)/tween/module.mk
 
 ifeq ($(HOST),android)
 else ifeq ($(HOST),emscripten)

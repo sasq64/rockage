@@ -2,10 +2,12 @@
 #define GAME_H
 
 #include <grappix/grappix.h>
-#include <deque>
 #include <flatland/shape.h>
 #include <flatland/node.h>
 #include <flatland/container.h>
+
+#include <deque>
+#include <memory>
 
 template <typename T> class CircularArray {
 public:
@@ -15,7 +17,7 @@ public:
 		return v[i % v.size()];
 	}
 
-	T operator[](const int &i) const { 
+	T operator[](const int &i) const {
 		return v[i % v.size()];
 	}
 
@@ -26,26 +28,41 @@ private:
 
 };
 
-class Game : public grappix::TileSource {
+class Game {
 public:
-	Game(const grappix::RenderTarget &target, int size = 48) : 
+	Game(const grappix::RenderTarget &target, int size = 48) :
 		width { 16 },
 		level_height { 1024 },
 		visible_height { 24 },
 		tile_size { target.width() / width },
 		render_target { target },
-		blocks { 512, 512 },
-		gamelayer { (width-1) * tile_size, visible_height * tile_size, tile_size, tile_size, blocks, *this },
-		spritelayer { blocks },
+		blocks { std::make_shared<grappix::TileSet>(512, 512) },
+		gamelayer { nullptr, make_shared<Source>(playfield, width, level_height) }, // pixelsize (width-1) * tile_size, visible_height * tile_size
+		spritelayer { nullptr },
 		playfield (width * visible_height * 2)
 	{
 		x_offset = (render_target.width() - width*tile_size)/2;
 		pwidth = width * tile_size;
 		pheight = visible_height * tile_size;
 
-		//auto &res = grappix::Resources::getInstance();
-		//res.register_image("tiles", [&](image::bitmap &bm) {
+		gamelayer.setFrame(grappix::Frame(x_offset, 0, target.width()-x_offset, target.height()));
+
+		auto &res = grappix::Resources::getInstance();
+		res.load<grappix::TileSet>("tiles.png", [=](std::shared_ptr<grappix::TileSet> ts) {
+		 	blocks = ts;
+		 	gamelayer.setTiles(blocks);
+		 	spritelayer.setTiles(blocks);
+		 	LOGD("BLOCKS LOADED");
+		}, [=]() -> std::shared_ptr<grappix::TileSet> {
 			create_tiles();
+			return blocks;
+		 });
+
+		//create_tiles();
+		//gamelayer.setTiles(blocks);
+		//spritelayer.setTiles(blocks);
+		//res.register_image("tiles", [&](image::bitmap &bm) {
+			//create_tiles();
 		//	bm = blocks.texture.get_pixels();
 		//});
 
@@ -78,21 +95,30 @@ public:
 	void update(uint32_t delta);
 	void render();
 
-	uint32_t getTile(uint32_t x, uint32_t y) override {
-		auto o = x + y*width;
-		uint32_t p = playfield[o];
-		if(p > 1) {
-			return 16+((y > 0 && playfield[o-width] == p ? 0 : 1) | 
-			       (x < width-1 && playfield[o+1] == p ? 0 : 2) | 
-			       (y < level_height-1 && playfield[o+width] == p ? 0 : 4) | 
-			       (x > 0 && playfield[o-1] == p ? 0 : 8)); 
+	class Source : public grappix::TileSource {
+	public:
+		Source(CircularArray<uint8_t> &pf, int w, int h) : playfield(pf), width(w), level_height(h) {}
+
+		uint32_t getTile(uint32_t x, uint32_t y) override {
+			auto o = x + y*width;
+			uint32_t p = playfield[o];
+			if(p > 1) {
+				return 16+((y > 0 && playfield[o-width] == p ? 0 : 1) |
+				       (x < width-1 && playfield[o+1] == p ? 0 : 2) |
+				       (y < level_height-1 && playfield[o+width] == p ? 0 : 4) |
+				       (x > 0 && playfield[o-1] == p ? 0 : 8));
+			}
+			return 0;
 		}
-		return 0;
-	}
+	private:
+		CircularArray<uint8_t> &playfield;
+		int width;
+		int level_height;
+	};
 
 private:
 
-	void fire_block();	
+	void fire_block();
 	void create_tiles();
 	void check_rectangle(unsigned int pos);
 	bool generate_block(int w, int h, int pos);
@@ -107,10 +133,10 @@ private:
 	grappix::RenderTarget render_target;
 
 
-	grappix::TileSet blocks;
+	std::shared_ptr<grappix::TileSet> blocks;
 	grappix::TileLayer gamelayer;
 	grappix::SpriteLayer spritelayer;
-	
+
 	int x_offset;
 	int ship_pos;
 	int target_pos;

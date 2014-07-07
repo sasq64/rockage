@@ -9,6 +9,8 @@
 #include <flatland/node.h>
 #include <flatland/container.h>
 
+#include <tween/tween.h>
+
 using namespace grappix;
 using namespace utils;
 using namespace flatland;
@@ -17,11 +19,11 @@ using namespace flatland;
 void Game::render() {
 
 	//static float r = 0;
-	gamelayer.render(render_target, x_offset);
+	gamelayer.render(render_target);
 
-	//auto dx = ship_pos - (ship_pos%tile_size) + x_offset;
-	//render_target.dashed_line(dx, 0, dx, render_target.height(), 0xff888888);
-	//render_target.dashed_line(dx+tile_size, 0, dx+tile_size, render_target.height(), 0xff888888);
+	auto dx = ship_pos - (ship_pos%tile_size) + x_offset;
+	render_target.dashed_line(dx, 0, dx, render_target.height(), 0xff888888);
+	render_target.dashed_line(dx+tile_size, 0, dx+tile_size, render_target.height(), 0xff888888);
 
 	spritelayer.render(render_target, x_offset);
 
@@ -33,33 +35,6 @@ void Game::render() {
 	if(game_over) {
 		render_target.text("GAME OVER", 0, pheight/2, 0xffffffff, 4.0);
 	}
-
-	//auto p = Shape::createRectangle(200,200).roundCorners(4, 34.0);
-	//auto p = Shape::createText("Hello people").scale(2.0).translate(-400,0);
-	//p = p.roundCorners(4, 2.0);
-	//p = p.rotate(100.5);
-	//p.render(context);
-	//render_target.render(p);
-
-	//Node node;
-	//Container<Shape> container(p);
-	//node.add(&container);
-	//node.render(context);
-
-	//Shape cardShape;
-	//cardShape = flatland::Shape::createRectangle(40,70).roundCorners(4, 2.0);
-	//cardShape = cardShape.makeSolid().setColor(flatland::Colors::WHITE).concat(cardShape.setColor(flatland::Colors::BLACK));
-
-	//cardShape.render(context);
-	//root.setRotation(r += 0.1);
-	//root.rotation() += 0.5;
-
-	root.render(context);
-
-	//auto c = Shape::createCircle(50);
-	//c.render(tempContext);
-
-	//cardShape.render(tempContext);
 }
 
 void Game::start() {
@@ -112,9 +87,10 @@ void Game::check_rectangle(unsigned int pos) {
 		LOGD("BOX!");
 		rec_bonus = ((yl-yu-1) + (r-l-1)) * 100;
 		for(unsigned int y=yu; y<=yl; y++)
-			for(unsigned int x=l; x<=r; x++)
+			for(unsigned int x=l; x<=r; x++) {
 				remove_tiles.push_back(x+y*width);
 				//playfield[x+y*width] = 0;
+			}
 	}
 };
 
@@ -147,7 +123,7 @@ void Game::fire_block() {
 		i -= width;
 	}
 
-	auto s = spritelayer.addSprite(31, tile_pos * tile_size, render_target.height() - tile_size*2);
+	auto s = spritelayer.addSprite(30, tile_pos * tile_size, render_target.height() - tile_size*2);
 
 	tween::make_tween().linear().to(s->y, target_y).seconds((s->y - target_y) * 0.001).on_complete([=]() mutable {
 		s = 0;
@@ -288,21 +264,22 @@ void Game::create_tiles() {
 
 	vec2f center { tile.width() / 2.0f, tile.height() / 2.0f };
 
-	blocks.add_solid(0xff000000, sz, sz);
+	blocks->addSolid(0x00000000, sz, sz);
 
 	tile.clear();
 	tile.circle(center, radius, 0x000020); // Outline
 	tile.circle(center, radius*0.90, 0x0000C0); // Main ball
 	tile.circle(center + vec2f{radius*0.15f, -radius*0.15f}, radius * 0.6, 0x0040ff); // Hilight
+	blocks->add(tile.get_pixels());
 
-	for(const auto &b : tile.get_pixels().split(tile_size, tile_size))
-		blocks.add(b);
+	//for(const auto &b : tile.get_pixels().split(tile_size, tile_size))
+	//	blocks->add(b);
 
-	tile.clear();
+	tile.clear(0);
 	tile.line(sz/2,0, sz, sz, 0xff00ff00);
 	tile.line(sz,sz, 0, sz, 0xff00ff00);
 	tile.line(0, sz, sz/2,0, 0xff00ff00);
-	blocks.add(tile.get_pixels());
+	blocks->add(tile.get_pixels());
 
 	uint32_t LIGHT = 0xffcccccc;
 	uint32_t GRAY = 0xffaaaaaa;
@@ -310,7 +287,9 @@ void Game::create_tiles() {
 	uint32_t BLACK = 0;//0xffff0000;
 
 	// UP, RIGHT, DOWN, LEFT
-	blocks.set_tile(16);
+	//blocks->set_tile(16);
+	while(blocks->size() < 16)
+		blocks->add(0,0,0,0);
 
 	rectf clip;
 
@@ -327,7 +306,7 @@ void Game::create_tiles() {
 	for(int i=0; i<16; i++) {
 		clip = {0, 0, (float)sz, (float)sz};
 
-		tile.clear();
+		tile.clear(0xffffffff);
 		rec(0,0,sz,sz,GRAY);
 		rec(sz*0.3, sz*0.3, sz*0.4, sz*0.4 ,0xff444444);
 
@@ -351,10 +330,11 @@ void Game::create_tiles() {
 			clip.x0 = 2;
 			rec(2, 0, 2, sz, LIGHT);
 		}
-		blocks.add(tile.get_pixels());
+		//save_png(tile.get_pixels(), format("tiles%02d.png", i));
+		blocks->add(tile.get_pixels());
 	}
 
-	//auto bm = blocks.texture.get_pixels();
+	auto bm = blocks->get_texture().get_pixels();
 	//save_png(bm, "tiles.png");
 
 }
